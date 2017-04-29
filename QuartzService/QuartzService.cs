@@ -42,6 +42,8 @@ namespace QuartzService
 
         public void onStartMethod()
         {
+            setupEventLog();
+            checkDirectories();
             log("QuartzService is starting");
             //Process any incoming updates at startup
             DBUpdater updater = new DBUpdater();
@@ -52,6 +54,29 @@ namespace QuartzService
             scheduler.Start();
 
             watchForUpdates();
+        }
+
+        /// <summary>
+        /// Setup event logging
+        /// </summary>
+        private void setupEventLog()
+        {
+            this.ServiceName = "Quartz Scheduler";
+            this.CanStop = true;
+            this.CanPauseAndContinue = true;
+
+            //Setup logging
+            this.AutoLog = false;
+
+            ((ISupportInitialize)this.EventLog).BeginInit();
+            if (!EventLog.SourceExists(this.ServiceName))
+            {
+                EventLog.CreateEventSource(this.ServiceName, "Quartz Scheduler");
+            }
+        ((ISupportInitialize)this.EventLog).EndInit();
+
+            this.EventLog.Source = this.ServiceName;
+            this.EventLog.Log = "Quartz Scheduler";
         }
 
         /// <summary>
@@ -122,12 +147,13 @@ namespace QuartzService
         }
 
         /// <summary>
-        /// Adds a line to the application log
+        /// Adds to the logs
         /// </summary>
         /// <param name="LogEntry"></param>
         /// <param name="LogFile"></param>
         public static void log(String LogEntry, String LogFile = LOGFILEDIRECTORY)
         {
+            logInEventViewer(LogEntry);
             String strLogFileName = DateTime.Now.ToString("yyyyMMdd") + @".log";
             LogFile += strLogFileName;
             lock(LogFile)
@@ -136,6 +162,48 @@ namespace QuartzService
                 {
                     streamWriter.WriteLine(DateTime.Now.ToString() + " " + LogEntry + "...");
                 }
+            }
+        }
+
+        private static void logInEventViewer(String Entry)
+        {
+            try
+            {
+                EventLog.WriteEntry(Entry);
+            }
+            catch(Exception ex)
+            {
+
+            }
+        }
+        
+        /// <summary>
+        /// Check for required directories and adds them if missing
+        /// </summary>
+        private void checkDirectories()
+        {
+            try
+            {
+                if(!Directory.Exists(LOGFILEDIRECTORY))
+                {
+                    Directory.CreateDirectory(LOGFILEDIRECTORY);
+                }
+            }
+            catch(Exception ex)
+            {
+
+            }
+
+            try
+            {
+                if(!Directory.Exists(strFlagsFolder))
+                {
+                    Directory.CreateDirectory(strFlagsFolder);
+                }
+            }
+            catch(Exception ex)
+            {
+
             }
         }
     }
