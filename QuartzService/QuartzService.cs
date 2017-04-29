@@ -44,7 +44,8 @@ namespace QuartzService
         {
             setupEventLog();
             checkDirectories();
-            log("QuartzService is starting");
+            EventLog.WriteEntry("Quartz Scheduler is starting");
+            log("QuartzScheduler is starting");
             //Process any incoming updates at startup
             DBUpdater updater = new DBUpdater();
             updater.updateFromIncoming();
@@ -76,7 +77,7 @@ namespace QuartzService
         ((ISupportInitialize)this.EventLog).EndInit();
 
             this.EventLog.Source = this.ServiceName;
-            this.EventLog.Log = "Quartz Scheduler";
+            this.EventLog.Log = "";
         }
 
         /// <summary>
@@ -100,15 +101,8 @@ namespace QuartzService
         {
             if(String.Equals(e.Name, "update.flg", StringComparison.CurrentCultureIgnoreCase))
             {
-                try
-                {
-                    log("UPDATE has been initiated");
-                    File.Delete(strFlagsFolder + @"\Update.flg");
-                }
-                catch(Exception ex)
-                {
-                    log("Error deleting Update.FLG Exception at \n" + ex);
-                }
+                log("UPDATE has been initiated");
+                deleteUpdateFLG();
                 DBUpdater updater = new DBUpdater();
                 String[,] jobIDs = updater.updateFromIncoming();
                 for(int i = 0;  i < jobIDs.Length / 2; i++)
@@ -149,11 +143,10 @@ namespace QuartzService
         /// <summary>
         /// Adds to the logs
         /// </summary>
-        /// <param name="LogEntry"></param>
-        /// <param name="LogFile"></param>
+        /// <param name="LogEntry">String to add to log file</param>
+        /// <param name="LogFile">Set automatically</param>
         public static void log(String LogEntry, String LogFile = LOGFILEDIRECTORY)
         {
-            logInEventViewer(LogEntry);
             String strLogFileName = DateTime.Now.ToString("yyyyMMdd") + @".log";
             LogFile += strLogFileName;
             lock(LogFile)
@@ -162,18 +155,6 @@ namespace QuartzService
                 {
                     streamWriter.WriteLine(DateTime.Now.ToString() + " " + LogEntry + "...");
                 }
-            }
-        }
-
-        private static void logInEventViewer(String Entry)
-        {
-            try
-            {
-                EventLog.WriteEntry(Entry);
-            }
-            catch(Exception ex)
-            {
-
             }
         }
         
@@ -191,7 +172,7 @@ namespace QuartzService
             }
             catch(Exception ex)
             {
-
+                EventLog.WriteEntry("Error checking " + LOGFILEDIRECTORY + "\n" + ex.StackTrace);
             }
 
             try
@@ -203,7 +184,7 @@ namespace QuartzService
             }
             catch(Exception ex)
             {
-
+                EventLog.WriteEntry("Error checking " + strFlagsFolder + "\n" + ex.StackTrace);
             }
         }
     }
