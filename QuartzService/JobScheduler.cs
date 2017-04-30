@@ -16,7 +16,8 @@ namespace QuartzService
     class JobScheduler
     {
         #region Constants, Variables, DataStructures
-        private const String JOBFILEPATH = @"C:\StoreSys\Data\Quartz\Jobs\Jobstore.json";
+        private String strJobsDirectory = Settings.Default.JobsDirectory;
+        private String strJobsFile = Settings.Default.JobsFile;
         List<JobTemplate> templates;  
         IScheduler scheduler = StdSchedulerFactory.GetDefaultScheduler();
         QuartzEntities1 db = new QuartzEntities1();
@@ -40,6 +41,8 @@ namespace QuartzService
 
             //scheduler.ScheduleJob(job1, trigger1);
             #endregion
+            loadAndScheduleJobsFromFiles();
+            loadAndScheduleJobsFromFile();
             loadJobsFromDB();
             setUpJobs();
         }
@@ -115,7 +118,108 @@ namespace QuartzService
                 QuartzService.log("Error scheduling " + Template.Name + "\n" + ex.StackTrace);
             }
         }
-        
+
+        /// <summary>
+        /// Loads and schedules jobs from a single JSON file in Jobs directory
+        /// </summary>
+        private void loadAndScheduleJobsFromFile()
+        {
+            try
+            {
+                if (File.Exists(strJobsFile))
+                {
+                    List<JobTemplate> fileTemplates = JsonConvert.DeserializeObject<List<JobTemplate>>(File.ReadAllText(strJobsFile));
+                    QuartzService.log(strJobsFile + " file loaded successfully...");
+                    foreach (JobTemplate template in fileTemplates)
+                    {
+                        try
+                        {
+                            IJobDetail job = JobBuilder.Create<Job>().Build();
+
+                            job.JobDataMap["ID"] = template.ID.ToString(); ;
+                            job.JobDataMap["Name"] = template.Name;
+                            job.JobDataMap["Group"] = template.Group;
+                            job.JobDataMap["Process"] = template.Process;
+                            job.JobDataMap["Arguments"] = template.Arguments;
+                            job.JobDataMap["CronSchedule"] = template.CronSchedule;
+                            job.JobDataMap["TimeOut"] = template.Timeout;
+
+                            ITrigger trigger = TriggerBuilder.Create()
+                                .WithIdentity(job.JobDataMap["ID"].ToString(), job.JobDataMap["Group"].ToString())
+                                .WithCronSchedule(job.JobDataMap["CronSchedule"].ToString())
+                                .StartAt(DateTime.UtcNow)
+                                .WithPriority(1)
+                                .Build();
+
+                            scheduler.ScheduleJob(job, trigger);
+                            QuartzService.log("Job ID " + template.ID + " has been scheduled");
+                        }
+                        catch (Exception ex)
+                        {
+                            QuartzService.log("Error scheduling " + template.Name + "\n" + ex.StackTrace);
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                QuartzService.log("Error loading jobs from " + strJobsFile + "\n" + ex.StackTrace);
+            }
+        }
+
+        /// <summary>
+        /// Loads and schedules jobs from JSON files in Jobs directory
+        /// </summary>
+        private void loadAndScheduleJobsFromFiles()
+        {
+            List<JobTemplate> fileTemplates = new List<JobTemplate>();
+            String[] filepaths = Directory.GetFiles(strJobsDirectory);
+
+            foreach (String file in filepaths)
+            {
+                try
+                {
+                    JobTemplate template = JsonConvert.DeserializeObject<JobTemplate>(File.ReadAllText(file));
+                    fileTemplates.Add(template);
+                    QuartzService.log(file + " file loaded successfully...");
+                }
+                catch (Exception ex)
+                {
+                    QuartzService.log("Error loading " + file + "\n" + ex.StackTrace);
+                }
+            }
+
+            foreach (JobTemplate template in fileTemplates)
+            {
+                try
+                {
+                    IJobDetail job = JobBuilder.Create<Job>().Build();
+
+                    job.JobDataMap["ID"] = template.ID.ToString(); ;
+                    job.JobDataMap["Name"] = template.Name;
+                    job.JobDataMap["Group"] = template.Group;
+                    job.JobDataMap["Process"] = template.Process;
+                    job.JobDataMap["Arguments"] = template.Arguments;
+                    job.JobDataMap["CronSchedule"] = template.CronSchedule;
+                    job.JobDataMap["TimeOut"] = template.Timeout;
+
+                    ITrigger trigger = TriggerBuilder.Create()
+                        .WithIdentity(job.JobDataMap["ID"].ToString(), job.JobDataMap["Group"].ToString())
+                        .WithCronSchedule(job.JobDataMap["CronSchedule"].ToString())
+                        .StartAt(DateTime.UtcNow)
+                        .WithPriority(1)
+                        .Build();
+
+                    scheduler.ScheduleJob(job, trigger);
+                    QuartzService.log("Job ID " + template.ID + " has been scheduled");
+                }
+                catch (Exception ex)
+                {
+                    QuartzService.log("Error scheduling " + template.Name + "\n" + ex.StackTrace);
+                }
+            }
+        }
+
         /// <summary>
         /// Loads all jobs from SQLDB into a template List
         /// </summary>
@@ -186,7 +290,7 @@ namespace QuartzService
         /// <summary>
         /// Removes a single job from scheduler by JobID
         /// </summary>
-        /// <param name="jobID"></param>
+        /// <param name="jobID">Job ID to be removed</param>
         public void removeJobFromScheduler(String jobID)
         {
             IList<string> jobGroups = scheduler.GetJobGroupNames();
@@ -215,7 +319,7 @@ namespace QuartzService
         /// <summary>
         /// Rename json files to err
         /// </summary>
-        /// <param name="InputString"></param>
+        /// <param name="InputString">File and path to be named to .err</param>
         private void renameToERR(String InputString)
         {
             String strNewFileName = String.Empty;

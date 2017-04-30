@@ -41,8 +41,8 @@ namespace QuartzService
             strWorkingDirectory = datamap.GetString("WorkingDirectory");
             iTimeOut = datamap.GetInt("TimeOut");
 
-            QuartzService.log("Running JobID " + iID + "...");
- 
+            QuartzService.log("Job ID " + iID + " is starting...");
+          
             iRecordID = recordUpdater.addNewRecord(iID, strName, DateTime.Now);
 
             try
@@ -57,11 +57,11 @@ namespace QuartzService
                 {
                     iTimedOut = 1;
                     process.Kill();
-                    QuartzService.log(strName + @" Process TimeOut of " + iTimeOut + "ms Exceeded... Process Killed"); 
+                    QuartzService.log("Job ID " + iID + " was stopped; Process TimeOut of " + iTimeOut + "ms Exceeded..."); 
                 }
                 else
                 {
-                    QuartzService.log(strName + @" Job Ended...");
+                    QuartzService.log("Job ID " + iID + " has completed...");
                 }
                 recordUpdater.setRecordEnding(iRecordID, DateTime.Now, iTimedOut);
             }

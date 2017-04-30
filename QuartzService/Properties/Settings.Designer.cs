@@ -40,5 +40,23 @@ namespace QuartzService.Properties {
                 return ((string)(this["IncomingDirectory"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Quartz\\JobsDirectory\\")]
+        public string JobsDirectory {
+            get {
+                return ((string)(this["JobsDirectory"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Quartz\\JobsFile\\Jobs.json")]
+        public string JobsFile {
+            get {
+                return ((string)(this["JobsFile"]));
+            }
+        }
     }
 }

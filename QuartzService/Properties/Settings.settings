@@ -8,5 +8,11 @@
     <Setting Name="IncomingDirectory" Type="System.String" Scope="Application">
       <Value Profile="(Default)">C:\Quartz\Incoming</Value>
     </Setting>
+    <Setting Name="JobsDirectory" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\Quartz\JobsDirectory\</Value>
+    </Setting>
+    <Setting Name="JobsFile" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\Quartz\JobsFile\Jobs.json</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
