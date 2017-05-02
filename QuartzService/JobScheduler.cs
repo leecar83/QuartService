@@ -120,6 +120,35 @@ namespace QuartzService
         }
 
         /// <summary>
+        /// Removes a single job from scheduler by JobID
+        /// </summary>
+        /// <param name="jobID">Job ID to be removed</param>
+        public void removeJobFromScheduler(String jobID)
+        {
+            IList<string> jobGroups = scheduler.GetJobGroupNames();
+            var groupMatcher = GroupMatcher<JobKey>.GroupContains(jobGroups[0]);
+            var jobKeys = scheduler.GetJobKeys(groupMatcher);
+            foreach (JobKey jobKey in jobKeys)
+            {
+                var detail = scheduler.GetJobDetail(jobKey);
+                String strID = detail.JobDataMap.GetString("ID");
+                if (strID == jobID)
+                {
+                    try
+                    {
+                        scheduler.DeleteJob(jobKey);
+                        QuartzService.log("Job ID " + jobID + " has been unscheduled");
+                    }
+                    catch (Exception ex)
+                    {
+                        QuartzService.log("Error removing job " + jobID + " from scheduler \n" + ex);
+                    }
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
         /// Loads and schedules jobs from a single JSON file in Jobs directory
         /// </summary>
         private void loadAndScheduleJobsFromFile()
@@ -283,35 +312,6 @@ namespace QuartzService
                 catch(Exception ex)
                 {
                     QuartzService.log("Error scheduling " + template.Name + "\n" + ex.StackTrace);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Removes a single job from scheduler by JobID
-        /// </summary>
-        /// <param name="jobID">Job ID to be removed</param>
-        public void removeJobFromScheduler(String jobID)
-        {
-            IList<string> jobGroups = scheduler.GetJobGroupNames();
-            var groupMatcher = GroupMatcher<JobKey>.GroupContains(jobGroups[0]);
-            var jobKeys = scheduler.GetJobKeys(groupMatcher);
-            foreach (JobKey jobKey in jobKeys)
-            {
-                var detail = scheduler.GetJobDetail(jobKey);
-                String strID = detail.JobDataMap.GetString("ID");
-                if (strID == jobID)
-                {
-                    try
-                    {
-                        scheduler.DeleteJob(jobKey);
-                        QuartzService.log("Job ID " + jobID + " has been unscheduled");
-                    }
-                    catch (Exception ex)
-                    {
-                        QuartzService.log("Error removing job " + jobID + " from scheduler \n" + ex);
-                    }
-                    break;
                 }
             }
         }
