@@ -94,10 +94,10 @@ namespace QuartzService
             try
             {
                 IJobDetail job = JobBuilder.Create<Job>().Build();
-
-                job.JobDataMap["ID"] = Template.ID.ToString(); ;
-                job.JobDataMap["Name"] = Template.Name;
-                job.JobDataMap["Group"] = Template.Group;
+                job.JobDataMap["ID"] = Template.ID.ToString();
+                //job.JobDataMap["Group"] = template.Group;
+                //Defaulting all to "Default" group for now
+                job.JobDataMap["Group"] = "Default";
                 job.JobDataMap["Process"] = Template.Process;
                 job.JobDataMap["Arguments"] = Template.Arguments;
                 job.JobDataMap["CronSchedule"] = Template.CronSchedule;
@@ -164,8 +164,7 @@ namespace QuartzService
                         try
                         {
                             IJobDetail job = JobBuilder.Create<Job>().Build();
-
-                            job.JobDataMap["ID"] = template.ID.ToString(); ;
+                            job.JobDataMap["ID"] = template.ID.ToString();
                             job.JobDataMap["Name"] = template.Name;
                             job.JobDataMap["Group"] = template.Group;
                             job.JobDataMap["Process"] = template.Process;
@@ -223,8 +222,7 @@ namespace QuartzService
                 try
                 {
                     IJobDetail job = JobBuilder.Create<Job>().Build();
-
-                    job.JobDataMap["ID"] = template.ID.ToString(); ;
+                    job.JobDataMap["ID"] = template.ID.ToString();
                     job.JobDataMap["Name"] = template.Name;
                     job.JobDataMap["Group"] = template.Group;
                     job.JobDataMap["Process"] = template.Process;
@@ -290,10 +288,11 @@ namespace QuartzService
                 try
                 {
                     IJobDetail job = JobBuilder.Create<Job>().Build();
-
-                    job.JobDataMap["ID"] = template.ID.ToString(); ;
+                    job.JobDataMap["ID"] = template.ID.ToString();
                     job.JobDataMap["Name"] = template.Name;
                     job.JobDataMap["Group"] = template.Group;
+                    //Defaulting all to "Default" group for now
+                    //job.JobDataMap["Group"] = "Default";
                     job.JobDataMap["Process"] = template.Process;
                     job.JobDataMap["Arguments"] = template.Arguments;
                     job.JobDataMap["CronSchedule"] = template.CronSchedule;

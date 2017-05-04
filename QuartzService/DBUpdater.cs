@@ -29,59 +29,69 @@ namespace QuartzService
         /// <returns>JobID and value indicating the change type</returns>
         public String[,] updateFromIncoming()
         {
-            QuartzService.log("Loading any incoming updates");
+            String[,] jobIDs = null;
+            QuartzService.log("Checking for any incoming updates");
             try
             {
-                if(!Directory.Exists(strIncomingDirectory))
+                if (!Directory.Exists(strIncomingDirectory))
                 {
                     Directory.CreateDirectory(strIncomingDirectory);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 QuartzService.log("Error checking for incoming folder " + "\n" + ex.StackTrace);
             }
-            List<String> filePaths = new List<String>(Directory.GetFiles(strIncomingDirectory));
-            String[,] jobIDs = new String[filePaths.Count, 2];
             try
-            { 
-                sortIncomingFiles(filePaths);
-                for(int i = 0; i < filePaths.Count; i++)
+            {
+                List<String> filePaths = new List<String>(Directory.GetFiles(strIncomingDirectory));
+                if(filePaths.Count > 0)
                 {
-                    if (filePaths[i].EndsWith(".json", StringComparison.CurrentCultureIgnoreCase))
+                    QuartzService.log("Running incoming updates");
+                    jobIDs = new String[filePaths.Count, 2];
+                    sortIncomingFiles(filePaths);
+                    for (int i = 0; i < filePaths.Count; i++)
                     {
-                        try
+                        if (filePaths[i].EndsWith(".json", StringComparison.CurrentCultureIgnoreCase))
                         {
-                            JobTemplate template = JsonConvert.DeserializeObject<JobTemplate>(File.ReadAllText(filePaths[i]));
                             try
                             {
-                                String iReturn = updateDatabase(template);
-                                QuartzService.log("Job ID " + template.ID + " set to update in DB");
-                                db.SaveChanges();
-                                QuartzService.log("Job ID " + template.ID + " changes saved to the DB");
-                                jobIDs[i,0] = template.ID.ToString();
-                                jobIDs[i,1] = iReturn.ToString();
+                                JobTemplate template = JsonConvert.DeserializeObject<JobTemplate>(File.ReadAllText(filePaths[i]));
                                 try
                                 {
-                                    File.Delete(filePaths[i]);
+                                    String iReturn = updateDatabase(template);
+                                    QuartzService.log("Job ID " + template.ID + " set to update in DB");
+                                    db.SaveChanges();
+                                    QuartzService.log("Job ID " + template.ID + " changes saved to the DB");
+                                    jobIDs[i, 0] = template.ID.ToString();
+                                    jobIDs[i, 1] = iReturn.ToString();
+                                    try
+                                    {
+                                        File.Delete(filePaths[i]);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        QuartzService.log("Error deleting JSON file after update Exception\n" + ex.StackTrace);
+                                    }
                                 }
                                 catch (Exception ex)
                                 {
-                                    QuartzService.log("Error deleting JSON file after update Exception\n" + ex.StackTrace);
+                                    QuartzService.log("Error updating the DB Exception\n" + ex.InnerException + "\n" + ex.StackTrace);
                                 }
                             }
                             catch (Exception ex)
                             {
-                                QuartzService.log("Error updating the DB Exception\n" + ex.InnerException + "\n" + ex.StackTrace);
+                                renameToERR(filePaths[i]);
+                                QuartzService.log("Error updating from " + filePaths[i] + "\n" + ex.StackTrace);
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            renameToERR(filePaths[i]);
-                            QuartzService.log("Error updating from " + filePaths[i] + "\n" + ex.StackTrace);
                         }
                     }
                 }
+                else
+                {
+                    QuartzService.log("No Updates Found");
+                }
+    
             }
             catch(Exception ex)
             {

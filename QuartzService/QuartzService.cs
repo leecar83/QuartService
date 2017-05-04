@@ -101,25 +101,33 @@ namespace QuartzService
         {
             if(String.Equals(e.Name, "update.flg", StringComparison.CurrentCultureIgnoreCase))
             {
-                log("UPDATE has been initiated");
-                deleteUpdateFLG();
-                DBUpdater updater = new DBUpdater();
-                String[,] jobIDs = updater.updateFromIncoming();
-                for(int i = 0;  i < jobIDs.Length / 2; i++)
+                runUpdate();
+            }
+        }
+        
+        /// <summary>
+        /// Update SQL DB and Job scheduler from incoming folder
+        /// </summary>
+        private void runUpdate()
+        {
+            log("UPDATE has been initiated");
+            deleteUpdateFLG();
+            DBUpdater updater = new DBUpdater();
+            String[,] jobIDs = updater.updateFromIncoming();
+            for (int i = 0; i < jobIDs.Length / 2; i++)
+            {
+                if (jobIDs[i, 1] == "1")
                 {
-                    if(jobIDs[i, 1] == "1")
-                    {
-                        scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
-                    }
-                    else if(jobIDs[i, 1] == "2")
-                    {
-                        scheduler.removeJobFromScheduler(jobIDs[i, 0]);
-                        scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
-                    }
-                    else if(jobIDs[i, 1] == "3")
-                    {
-                        scheduler.removeJobFromScheduler(jobIDs[i, 0]);
-                    }
+                    scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
+                }
+                else if (jobIDs[i, 1] == "2")
+                {
+                    scheduler.removeJobFromScheduler(jobIDs[i, 0]);
+                    scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
+                }
+                else if (jobIDs[i, 1] == "3")
+                {
+                    scheduler.removeJobFromScheduler(jobIDs[i, 0]);
                 }
             }
         }
