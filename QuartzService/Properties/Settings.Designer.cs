@@ -58,5 +58,32 @@ namespace QuartzService.Properties {
                 return ((string)(this["JobsFile"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MSSQLEnabled {
+            get {
+                return ((bool)(this["MSSQLEnabled"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool JobsDirectoryEnabled {
+            get {
+                return ((bool)(this["JobsDirectoryEnabled"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool JobsFileEnabled {
+            get {
+                return ((bool)(this["JobsFileEnabled"]));
+            }
+        }
     }
 }

@@ -41,10 +41,19 @@ namespace QuartzService
 
             //scheduler.ScheduleJob(job1, trigger1);
             #endregion
-            loadAndScheduleJobsFromFiles();
-            loadAndScheduleJobsFromFile();
-            loadJobsFromDB();
-            setUpJobs();
+            if(Settings.Default.JobsDirectoryEnabled)
+            {
+                loadAndScheduleJobsFromFiles();
+            }
+            if(Settings.Default.JobsFileEnabled)
+            {
+                loadAndScheduleJobsFromFile();
+            }
+            if(Settings.Default.MSSQLEnabled)
+            {
+                loadJobsFromDB();
+                setUpJobs();
+            }
         }
 
         /// <summary>

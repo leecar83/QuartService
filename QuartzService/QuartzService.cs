@@ -99,35 +99,41 @@ namespace QuartzService
         /// <param name="e"></param>
         private void OnChanged(Object source, FileSystemEventArgs e)
         {
-            if(String.Equals(e.Name, "update.flg", StringComparison.CurrentCultureIgnoreCase))
+            if(String.Equals(e.Name, "updatesql.flg", StringComparison.CurrentCultureIgnoreCase))
             {
-                runUpdate();
+                if(Settings.Default.MSSQLEnabled)
+                {
+                    runSQLUpdate();
+                } 
             }
         }
         
         /// <summary>
         /// Update SQL DB and Job scheduler from incoming folder
         /// </summary>
-        private void runUpdate()
+        private void runSQLUpdate()
         {
-            log("UPDATE has been initiated");
-            deleteUpdateFLG();
+            log("UPDATESQL has been initiated");
+            deleteUpdateSQLFLG();
             DBUpdater updater = new DBUpdater();
             String[,] jobIDs = updater.updateFromIncoming();
-            for (int i = 0; i < jobIDs.Length / 2; i++)
+            if (jobIDs != null)
             {
-                if (jobIDs[i, 1] == "1")
+                for (int i = 0; i < jobIDs.Length / 2; i++)
                 {
-                    scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
-                }
-                else if (jobIDs[i, 1] == "2")
-                {
-                    scheduler.removeJobFromScheduler(jobIDs[i, 0]);
-                    scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
-                }
-                else if (jobIDs[i, 1] == "3")
-                {
-                    scheduler.removeJobFromScheduler(jobIDs[i, 0]);
+                    if (jobIDs[i, 1] == "1")
+                    {
+                        scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
+                    }
+                    else if (jobIDs[i, 1] == "2")
+                    {
+                        scheduler.removeJobFromScheduler(jobIDs[i, 0]);
+                        scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
+                    }
+                    else if (jobIDs[i, 1] == "3")
+                    {
+                        scheduler.removeJobFromScheduler(jobIDs[i, 0]);
+                    }
                 }
             }
         }
@@ -135,12 +141,12 @@ namespace QuartzService
         /// <summary>
         /// Deletes the UPDATE.FLG safely
         /// </summary>
-        private void deleteUpdateFLG()
+        private void deleteUpdateSQLFLG()
         {
             try
             {
-                if(File.Exists(strFlagsFolder + @"\Update.flg"))
-                File.Delete(strFlagsFolder + @"\Update.flg");
+                if(File.Exists(strFlagsFolder + @"\UpdateSQL.flg"))
+                File.Delete(strFlagsFolder + @"\UpdateSQL.flg");
             }
             catch (Exception ex)
             {
@@ -167,7 +173,7 @@ namespace QuartzService
         }
         
         /// <summary>
-        /// Check for required directories and adds them if missing
+        /// Check for required directories and clears flags folder
         /// </summary>
         private void checkDirectories()
         {
@@ -188,6 +194,31 @@ namespace QuartzService
                 if(!Directory.Exists(strFlagsFolder))
                 {
                     Directory.CreateDirectory(strFlagsFolder);
+                }
+                else
+                {
+                    try
+                    {
+                        String[] flagFiles = Directory.GetFiles(strFlagsFolder);
+                        if(flagFiles.Length > 0)
+                        {
+                            foreach(String file in flagFiles)
+                            {
+                                try
+                                {
+                                    File.Delete(file);
+                                }
+                                catch(Exception ex)
+                                {
+                                    EventLog.WriteEntry("Error deleting flag " + file + " in " + strFlagsFolder + "\n" + ex.StackTrace);
+                                }
+                            }
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        EventLog.WriteEntry("Error checking for flags in " + strFlagsFolder + "\n" + ex.StackTrace);
+                    }
                 }
             }
             catch(Exception ex)

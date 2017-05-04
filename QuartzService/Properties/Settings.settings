@@ -14,5 +14,14 @@
     <Setting Name="JobsFile" Type="System.String" Scope="Application">
       <Value Profile="(Default)">C:\Quartz\JobsFile\Jobs.json</Value>
     </Setting>
+    <Setting Name="MSSQLEnabled" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="JobsDirectoryEnabled" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="JobsFileEnabled" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
