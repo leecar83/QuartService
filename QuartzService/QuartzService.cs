@@ -81,7 +81,7 @@ namespace QuartzService
         }
 
         /// <summary>
-        /// Sets up FileSystemWatcher to watch for UPDATE.FLG
+        /// Sets up FileSystemWatcher to watch for update FLGs
         /// </summary>
         private void watchForUpdates()
         {
@@ -182,6 +182,18 @@ namespace QuartzService
                 if(!Directory.Exists(LOGFILEDIRECTORY))
                 {
                     Directory.CreateDirectory(LOGFILEDIRECTORY);
+                }
+            }
+            catch(Exception ex)
+            {
+                EventLog.WriteEntry("Error checking " + LOGFILEDIRECTORY + "\n" + ex.StackTrace);
+            }
+
+            try
+            {
+                if (!Directory.Exists(Settings.Default.JobsDirectory))
+                {
+                    Directory.CreateDirectory(Settings.Default.JobsDirectory);
                 }
             }
             catch(Exception ex)
