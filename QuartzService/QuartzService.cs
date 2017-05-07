@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.ServiceProcess;
 using System.Text;
+using System.Threading;
 
 namespace QuartzService
 {
@@ -116,30 +117,30 @@ namespace QuartzService
             log("UPDATESQL has been initiated");
             deleteUpdateSQLFLG();
             DBUpdater updater = new DBUpdater();
-            String[,] jobIDs = updater.updateFromIncoming();
+            Dictionary<JobTemplate,String> jobIDs = updater.updateFromIncoming();
             if (jobIDs != null)
             {
-                for (int i = 0; i < jobIDs.Length / 2; i++)
+               foreach(var key in jobIDs)
                 {
-                    if (jobIDs[i, 1] == "1")
+                    if(key.Value == "1")
                     {
-                        scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
+                        scheduler.setUpJob(scheduler.loadJobFromDB(key.Key.ID.ToString()));
                     }
-                    else if (jobIDs[i, 1] == "2")
+                    else if(key.Value == "2")
                     {
-                        scheduler.removeJobFromScheduler(jobIDs[i, 0]);
-                        scheduler.setUpJob(scheduler.loadJobFromDB(jobIDs[i, 0]));
+                        scheduler.removeJobFromScheduler(key.Key.ID.ToString());
+                        scheduler.setUpJob(key.Key);
                     }
-                    else if (jobIDs[i, 1] == "3")
+                    else if (key.Value == "3")
                     {
-                        scheduler.removeJobFromScheduler(jobIDs[i, 0]);
+                        scheduler.removeJobFromScheduler(key.Key.ID.ToString());
                     }
                 }
             }
         }
         
         /// <summary>
-        /// Deletes the UPDATE.FLG safely
+        /// Deletes the UPDATESQL.FLG safely
         /// </summary>
         private void deleteUpdateSQLFLG()
         {
@@ -173,7 +174,7 @@ namespace QuartzService
         }
         
         /// <summary>
-        /// Check for required directories and clears flags folder
+        /// Checks for required directories and clears flags folder
         /// </summary>
         private void checkDirectories()
         {
@@ -188,7 +189,17 @@ namespace QuartzService
             {
                 EventLog.WriteEntry("Error checking " + LOGFILEDIRECTORY + "\n" + ex.StackTrace);
             }
-
+            try
+            {
+                if (!Directory.Exists(Settings.Default.IncomingDirectory))
+                {
+                    Directory.CreateDirectory(Settings.Default.IncomingDirectory);
+                }
+            }
+            catch (Exception ex)
+            {
+                QuartzService.log("Error checking for incoming folder " + "\n" + ex.StackTrace);
+            }
             try
             {
                 if (!Directory.Exists(Settings.Default.JobsDirectory))

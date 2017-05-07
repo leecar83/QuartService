@@ -24,31 +24,21 @@ namespace QuartzService
         }
 
         /// <summary>
-        /// Updates SQLDB from incoming files
+        /// Updates SQLDB from incoming folder JSON files
         /// </summary>
-        /// <returns>JobID and value indicating the change type</returns>
-        public String[,] updateFromIncoming()
+        /// <returns>Dictionary with Template keys and values indicating the update types</returns>
+        public Dictionary<JobTemplate,String> updateFromIncoming()
         {
-            String[,] jobIDs = null;
+            Dictionary<JobTemplate, String> jobIDs = null;
             QuartzService.log("Checking for any incoming updates");
-            try
-            {
-                if (!Directory.Exists(strIncomingDirectory))
-                {
-                    Directory.CreateDirectory(strIncomingDirectory);
-                }
-            }
-            catch (Exception ex)
-            {
-                QuartzService.log("Error checking for incoming folder " + "\n" + ex.StackTrace);
-            }
             try
             {
                 List<String> filePaths = new List<String>(Directory.GetFiles(strIncomingDirectory));
                 if(filePaths.Count > 0)
                 {
                     QuartzService.log("Running incoming updates");
-                    jobIDs = new String[filePaths.Count, 2];
+                    //jobIDs = new String[filePaths.Count, 2];
+                    jobIDs = new Dictionary<JobTemplate, String>();
                     sortIncomingFiles(filePaths);
                     for (int i = 0; i < filePaths.Count; i++)
                     {
@@ -63,8 +53,9 @@ namespace QuartzService
                                     QuartzService.log("Job ID " + template.ID + " set to update in DB");
                                     db.SaveChanges();
                                     QuartzService.log("Job ID " + template.ID + " changes saved to the DB");
-                                    jobIDs[i, 0] = template.ID.ToString();
-                                    jobIDs[i, 1] = iReturn.ToString();
+                                    //jobIDs[i, 0] = template.ID.ToString();
+                                    //jobIDs[i, 1] = iReturn.ToString();
+                                    jobIDs.Add(template, iReturn);
                                     try
                                     {
                                         File.Delete(filePaths[i]);
