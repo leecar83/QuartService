@@ -37,7 +37,6 @@ namespace QuartzService
                 if(filePaths.Count > 0)
                 {
                     QuartzService.log("Running incoming updates");
-                    //jobIDs = new String[filePaths.Count, 2];
                     jobIDs = new Dictionary<JobTemplate, String>();
                     sortIncomingFiles(filePaths);
                     for (int i = 0; i < filePaths.Count; i++)
@@ -53,8 +52,6 @@ namespace QuartzService
                                     QuartzService.log("Job ID " + template.ID + " set to update in DB");
                                     db.SaveChanges();
                                     QuartzService.log("Job ID " + template.ID + " changes saved to the DB");
-                                    //jobIDs[i, 0] = template.ID.ToString();
-                                    //jobIDs[i, 1] = iReturn.ToString();
                                     jobIDs.Add(template, iReturn);
                                     try
                                     {
@@ -120,7 +117,7 @@ namespace QuartzService
                 var jobQuery = from job in db.Jobs
                                where job.JobId == template.ID
                                select job;
-
+                // job needs updated
                 if (jobQuery.Count() == 1)
                 {
                     DBJob dbJob = jobQuery.SingleOrDefault();
@@ -133,6 +130,7 @@ namespace QuartzService
                     dbJob.TimeOut = Int32.Parse(template.Timeout);
                     iReturn = "2";
                 }
+                //job needs added
                 if (jobQuery.Count() == 0)
                 {
                     DBJob dbJob = new DBJob();
