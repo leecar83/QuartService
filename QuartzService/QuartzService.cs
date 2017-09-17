@@ -164,13 +164,24 @@ namespace QuartzService
         {
             String strLogFileName = DateTime.Now.ToString("yyyyMMdd") + @".log";
             LogFile += strLogFileName;
-            lock(LogFile)
+            try
             {
-                using (StreamWriter streamWriter = new StreamWriter(LogFile, true))
+                lock (LogFile)
                 {
-                    streamWriter.WriteLine(DateTime.Now.ToString() + " " + LogEntry + "...");
+                    using (StreamWriter streamWriter = new StreamWriter(LogFile, true))
+                    {
+                        streamWriter.WriteLine(DateTime.Now.ToString() + " " + LogEntry + "...");
+                    }
                 }
             }
+            catch(Exception ex)
+            {
+                using (StreamWriter streamWriter = new StreamWriter(@"C:\Temp\QuartzError.log", true))
+                {
+                    streamWriter.WriteLine(DateTime.Now.ToString() + " Exception: " + ex.Message);
+                }
+            }
+        
         }
         
         /// <summary>
