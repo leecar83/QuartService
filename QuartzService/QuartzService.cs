@@ -117,21 +117,21 @@ namespace QuartzService
             log("UPDATESQL has been initiated");
             deleteUpdateSQLFLG();
             DBUpdater updater = new DBUpdater();
-            Dictionary<JobTemplate,String> jobIDs = updater.updateFromIncoming();
+            Dictionary<JobTemplate,UpdateType> jobIDs = updater.updateFromIncoming();
             if (jobIDs != null)
             {
                foreach(var key in jobIDs)
                 {
-                    if(key.Value == "1")
+                    if(key.Value == UpdateType.Add)
                     {
                         scheduler.setUpJob(scheduler.loadJobFromDB(key.Key.ID.ToString()));
                     }
-                    else if(key.Value == "2")
+                    else if(key.Value == UpdateType.Change)
                     {
                         scheduler.removeJobFromScheduler(key.Key.ID.ToString());
                         scheduler.setUpJob(key.Key);
                     }
-                    else if (key.Value == "3")
+                    else if (key.Value == UpdateType.Remove)
                     {
                         scheduler.removeJobFromScheduler(key.Key.ID.ToString());
                     }

@@ -27,9 +27,9 @@ namespace QuartzService
         /// Updates SQLDB from incoming folder JSON files
         /// </summary>
         /// <returns>Dictionary with Template keys and values indicating the update types</returns>
-        public Dictionary<JobTemplate,String> updateFromIncoming()
+        public Dictionary<JobTemplate,UpdateType> updateFromIncoming()
         {
-            Dictionary<JobTemplate, String> jobIDs = null;
+            Dictionary<JobTemplate, UpdateType> jobIDs = null;
             QuartzService.log("Checking for any incoming updates");
             try
             {
@@ -37,7 +37,7 @@ namespace QuartzService
                 if(filePaths.Count > 0)
                 {
                     QuartzService.log("Running incoming updates");
-                    jobIDs = new Dictionary<JobTemplate, String>();
+                    jobIDs = new Dictionary<JobTemplate, UpdateType>();
                     sortIncomingFiles(filePaths);
                     for (int i = 0; i < filePaths.Count; i++)
                     {
@@ -48,11 +48,11 @@ namespace QuartzService
                                 JobTemplate template = JsonConvert.DeserializeObject<JobTemplate>(File.ReadAllText(filePaths[i]));
                                 try
                                 {
-                                    String iReturn = updateDatabase(template);
+                                    UpdateType updateType = updateDatabase(template);
                                     QuartzService.log("Job ID " + template.ID + " set to update in DB");
                                     db.SaveChanges();
                                     QuartzService.log("Job ID " + template.ID + " changes saved to the DB");
-                                    jobIDs.Add(template, iReturn);
+                                    jobIDs.Add(template, updateType);
                                     try
                                     {
                                         File.Delete(filePaths[i]);
@@ -92,9 +92,9 @@ namespace QuartzService
         /// Updates SQLDB from single template
         /// </summary>
         /// <param name="template"></param>
-        private String updateDatabase(JobTemplate template)
+        private UpdateType updateDatabase(JobTemplate template)
         {
-            String iReturn = "0";
+            UpdateType updateType = UpdateType.Unknown;
             //check to see if all null except ID(this means to delete JOB from DB)
             if(template.Name == null &&
                 template.Group == null &&
@@ -108,7 +108,7 @@ namespace QuartzService
                 if (toDelete != null)
                 {
                     db.Entry(toDelete).State = System.Data.Entity.EntityState.Deleted;
-                    iReturn = "3";
+                    updateType = UpdateType.Remove;
                 }
             }
             //job needs to be added or updated
@@ -128,7 +128,7 @@ namespace QuartzService
                     dbJob.Arguments = template.Arguments;
                     dbJob.CronSchedule = template.CronSchedule;
                     dbJob.TimeOut = Int32.Parse(template.Timeout);
-                    iReturn = "2";
+                    updateType = UpdateType.Change;
                 }
                 //job needs added
                 if (jobQuery.Count() == 0)
@@ -143,10 +143,10 @@ namespace QuartzService
                     dbJob.CronSchedule = template.CronSchedule;
                     dbJob.TimeOut = Int32.Parse(template.Timeout);
                     db.Jobs.Add(dbJob);
-                    iReturn = "1";
+                    updateType = UpdateType.Add;
                 }
             }
-            return iReturn;
+            return updateType;
         }
 
         /// <summary>
@@ -202,5 +202,13 @@ namespace QuartzService
                 QuartzService.log("Error renaming  " + InputString + " to .err Exception\n" + ex.StackTrace);
             }  
         }
+    }
+
+    public enum UpdateType
+    {
+        Add, 
+        Change, 
+        Remove, 
+        Unknown
     }
 }
