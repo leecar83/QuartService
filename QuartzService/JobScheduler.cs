@@ -13,12 +13,12 @@ using System.Text;
 
 namespace QuartzService
 {
-    class JobScheduler
+    public class JobScheduler
     {
         #region Constants, Variables, DataStructures
         private String strJobsDirectory = Settings.Default.JobsDirectory;
         private String strJobsFile = Settings.Default.JobsFile;
-        List<JobTemplate> templates;  
+        public List<JobTemplate> templates;  
         IScheduler scheduler = StdSchedulerFactory.GetDefaultScheduler();
         QuartzEntities1 db = new QuartzEntities1();
         #endregion
@@ -330,6 +330,26 @@ namespace QuartzService
                     QuartzService.log("Error scheduling " + template.Name + "\n" + ex.StackTrace);
                 }
             }
+        }
+
+        /// <summary>
+        /// Return all JobIDs of scheduled jobs
+        /// </summary>
+        /// <returns></returns>
+        public String[] getAllJobIDS()
+        {
+            IList<string> jobGroups = scheduler.GetJobGroupNames();
+            var groupMatcher = GroupMatcher<JobKey>.GroupContains(jobGroups[0]);
+            var jobKeys = scheduler.GetJobKeys(groupMatcher);
+            String[] jobIDS = new string[jobKeys.Count];
+            int index = 0;
+            foreach (JobKey jobKey in jobKeys)
+            {
+                var detail = scheduler.GetJobDetail(jobKey);
+                jobIDS[index] = detail.JobDataMap.GetString("ID");
+                index++;
+            }
+            return jobIDS;
         }
 
         /// <summary>

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace QuartzService
 {
-    class JobTemplate
+    public class JobTemplate
     {
         #region Properties
         public int ID { get; set; }

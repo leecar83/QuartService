@@ -9,13 +9,15 @@ using System.Linq;
 using System.ServiceProcess;
 using System.Text;
 using System.Threading;
+using System.ServiceModel;
 
 namespace QuartzService
 {
     public partial class QuartzService : ServiceBase
     {
         #region Variables & Constants
-        JobScheduler scheduler;
+        public static JobScheduler scheduler;
+        public static ServiceHost host;
         FileSystemWatcher updateFlagWatcher;
         private String strFlagsFolder = Settings.Default.FlagsDirectory;
         const String LOGFILEDIRECTORY = @"C:\Quartz\Logs\";
@@ -35,6 +37,7 @@ namespace QuartzService
         protected override void OnStop()
         {
             log("Stopping Quartz Scheduler...");
+            host.Close();
             if (scheduler != null)
             {
                 scheduler.Stop();
@@ -55,6 +58,7 @@ namespace QuartzService
             scheduler = new JobScheduler();
             scheduler.Start();
 
+            startWCFServer();
             watchForUpdates();
         }
 
@@ -259,6 +263,65 @@ namespace QuartzService
             {
                 EventLog.WriteEntry("Error checking " + strFlagsFolder + "\n" + ex.StackTrace);
             }
+        }
+
+        private void startWCFServer()
+        {
+            QuartzService.host = new ServiceHost(typeof(JobUpdater),
+                 new Uri[]{
+                      new Uri("http://localhost:8000"),
+                      new Uri("net.pipe://localhost")
+                          });
+            
+                host.AddServiceEndpoint(typeof(IJobUpdater),
+                  new BasicHttpBinding(),
+                  "Reverse");
+
+                host.AddServiceEndpoint(typeof(IJobUpdater),
+                  new NetNamedPipeBinding(),
+                  "PipeReverse");
+
+                host.Open();      
+        }
+    }
+
+    [ServiceContract]
+    public interface IJobUpdater
+    {
+        [OperationContract]
+        Boolean UpdateJobs(List<int> jobs);
+    }
+
+    public class JobUpdater : IJobUpdater
+    {
+        public Boolean UpdateJobs(List<int> jobs)
+        {
+            bool Successful = false;
+            try
+            {
+                String[] jobIDs = QuartzService.scheduler.getAllJobIDS();
+                foreach(var job in jobs)
+                {
+                    if (jobIDs.Contains(job.ToString()))
+                    {
+                        QuartzService.scheduler.removeJobFromScheduler(job.ToString());
+                        JobTemplate temp = QuartzService.scheduler.loadJobFromDB(job.ToString());
+                        if (temp.ID > 0)
+                        {
+                            QuartzService.scheduler.setUpJob(QuartzService.scheduler.loadJobFromDB(job.ToString()));
+                        }
+                    }
+                    else
+                    {
+                        QuartzService.scheduler.setUpJob(QuartzService.scheduler.loadJobFromDB(job.ToString()));
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                QuartzService.log("Error Updating jobs thru IJobupdater " + "\n" + ex.StackTrace);
+            }
+            return Successful;
         }
     }
 }
