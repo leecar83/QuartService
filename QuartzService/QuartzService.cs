@@ -10,6 +10,8 @@ using System.ServiceProcess;
 using System.Text;
 using System.Threading;
 using System.ServiceModel;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace QuartzService
 {
@@ -21,7 +23,8 @@ namespace QuartzService
         FileSystemWatcher updateFlagWatcher;
         private String strFlagsFolder = Settings.Default.FlagsDirectory;
         const String LOGFILEDIRECTORY = @"C:\Quartz\Logs\";
- 
+        public static BlockingCollection<LogEntry> logMessages = new BlockingCollection<LogEntry>();
+
         #endregion
 
         public QuartzService()
@@ -49,6 +52,7 @@ namespace QuartzService
             setupEventLog();
             checkDirectories();
             EventLog.WriteEntry("Quartz Scheduler is starting");
+            Task.Factory.StartNew(() => RunConsumer());
             log("QuartzScheduler is starting");
             //Process any incoming updates at startup
             DBUpdater updater = new DBUpdater();
@@ -96,7 +100,7 @@ namespace QuartzService
             updateFlagWatcher.Changed += new FileSystemEventHandler(OnChanged);
             updateFlagWatcher.EnableRaisingEvents = true;
         }
-        
+
         /// <summary>
         /// Event handler for change to flags directory
         /// </summary>
@@ -104,15 +108,15 @@ namespace QuartzService
         /// <param name="e"></param>
         private void OnChanged(Object source, FileSystemEventArgs e)
         {
-            if(String.Equals(e.Name, "updatesql.flg", StringComparison.CurrentCultureIgnoreCase))
+            if (String.Equals(e.Name, "updatesql.flg", StringComparison.CurrentCultureIgnoreCase))
             {
-                if(Settings.Default.MSSQLEnabled)
+                if (Settings.Default.MSSQLEnabled)
                 {
                     runSQLUpdate();
-                } 
+                }
             }
         }
-        
+
         /// <summary>
         /// Update SQL DB and Job scheduler from incoming folder
         /// </summary>
@@ -121,16 +125,16 @@ namespace QuartzService
             log("UPDATESQL has been initiated");
             deleteUpdateSQLFLG();
             DBUpdater updater = new DBUpdater();
-            Dictionary<JobTemplate,UpdateType> jobIDs = updater.updateFromIncoming();
+            Dictionary<JobTemplate, UpdateType> jobIDs = updater.updateFromIncoming();
             if (jobIDs != null)
             {
-               foreach(var key in jobIDs)
+                foreach (var key in jobIDs)
                 {
-                    if(key.Value == UpdateType.Add)
+                    if (key.Value == UpdateType.Add)
                     {
                         scheduler.setUpJob(scheduler.loadJobFromDB(key.Key.ID.ToString()));
                     }
-                    else if(key.Value == UpdateType.Change)
+                    else if (key.Value == UpdateType.Change)
                     {
                         scheduler.removeJobFromScheduler(key.Key.ID.ToString());
                         scheduler.setUpJob(key.Key);
@@ -142,7 +146,7 @@ namespace QuartzService
                 }
             }
         }
-        
+
         /// <summary>
         /// Deletes the UPDATESQL.FLG safely
         /// </summary>
@@ -150,8 +154,8 @@ namespace QuartzService
         {
             try
             {
-                if(File.Exists(strFlagsFolder + @"\UpdateSQL.flg"))
-                File.Delete(strFlagsFolder + @"\UpdateSQL.flg");
+                if (File.Exists(strFlagsFolder + @"\UpdateSQL.flg"))
+                    File.Delete(strFlagsFolder + @"\UpdateSQL.flg");
             }
             catch (Exception ex)
             {
@@ -160,34 +164,52 @@ namespace QuartzService
         }
 
         /// <summary>
-        /// Adds to the logs
+        /// Consumer for items added to the logging blocking collection
+        /// </summary>
+        private void RunConsumer()
+        {
+            foreach (var item in logMessages.GetConsumingEnumerable())
+            {
+                processLogEntry(item.strLogentry, item.strLogFile);
+            }
+        }
+
+        /// <summary>
+        /// Adds to the log blocking collection
         /// </summary>
         /// <param name="LogEntry">String to add to log file</param>
         /// <param name="LogFile">Set automatically</param>
         public static void log(String LogEntry, String LogFile = LOGFILEDIRECTORY)
         {
+            LogEntry logEntry = new LogEntry { strLogentry = LogEntry, strLogFile = LOGFILEDIRECTORY };
+            logMessages.Add(logEntry);
+        }
+
+        /// <summary>
+        /// writes to the log
+        /// </summary>
+        /// <param name="LogEntry"></param>
+        /// <param name="LogFile"></param>
+        private void processLogEntry(String LogEntry, String LogFile)
+        {
             String strLogFileName = DateTime.Now.ToString("yyyyMMdd") + @".log";
             LogFile += strLogFileName;
             try
             {
-                lock (LogFile)
+                using (StreamWriter streamWriter = new StreamWriter(LogFile, true))
                 {
-                    using (StreamWriter streamWriter = new StreamWriter(LogFile, true))
-                    {
-                        streamWriter.WriteLine(DateTime.Now.ToString() + " " + LogEntry + "...");
-                    }
+                    streamWriter.WriteLine(DateTime.Now.ToString() + " " + LogEntry + "...");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 using (StreamWriter streamWriter = new StreamWriter(@"C:\Temp\QuartzError.log", true))
                 {
                     streamWriter.WriteLine(DateTime.Now.ToString() + " Exception: " + ex.Message);
                 }
             }
-        
         }
-        
+
         /// <summary>
         /// Checks for required directories and clears flags folder
         /// </summary>
@@ -195,12 +217,12 @@ namespace QuartzService
         {
             try
             {
-                if(!Directory.Exists(LOGFILEDIRECTORY))
+                if (!Directory.Exists(LOGFILEDIRECTORY))
                 {
                     Directory.CreateDirectory(LOGFILEDIRECTORY);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 EventLog.WriteEntry("Error checking " + LOGFILEDIRECTORY + "\n" + ex.StackTrace);
             }
@@ -222,14 +244,14 @@ namespace QuartzService
                     Directory.CreateDirectory(Settings.Default.JobsDirectory);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 EventLog.WriteEntry("Error checking " + LOGFILEDIRECTORY + "\n" + ex.StackTrace);
             }
 
             try
             {
-                if(!Directory.Exists(strFlagsFolder))
+                if (!Directory.Exists(strFlagsFolder))
                 {
                     Directory.CreateDirectory(strFlagsFolder);
                 }
@@ -238,28 +260,28 @@ namespace QuartzService
                     try
                     {
                         String[] flagFiles = Directory.GetFiles(strFlagsFolder);
-                        if(flagFiles.Length > 0)
+                        if (flagFiles.Length > 0)
                         {
-                            foreach(String file in flagFiles)
+                            foreach (String file in flagFiles)
                             {
                                 try
                                 {
                                     File.Delete(file);
                                 }
-                                catch(Exception ex)
+                                catch (Exception ex)
                                 {
                                     EventLog.WriteEntry("Error deleting flag " + file + " in " + strFlagsFolder + "\n" + ex.StackTrace);
                                 }
                             }
                         }
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         EventLog.WriteEntry("Error checking for flags in " + strFlagsFolder + "\n" + ex.StackTrace);
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 EventLog.WriteEntry("Error checking " + strFlagsFolder + "\n" + ex.StackTrace);
             }
@@ -272,17 +294,23 @@ namespace QuartzService
                       new Uri("http://localhost:8000"),
                       new Uri("net.pipe://localhost")
                           });
-            
-                host.AddServiceEndpoint(typeof(IJobUpdater),
-                  new BasicHttpBinding(),
-                  "Reverse");
 
-                host.AddServiceEndpoint(typeof(IJobUpdater),
-                  new NetNamedPipeBinding(),
-                  "PipeReverse");
+            host.AddServiceEndpoint(typeof(IJobUpdater),
+              new BasicHttpBinding(),
+              "Reverse");
 
-                host.Open();      
+            host.AddServiceEndpoint(typeof(IJobUpdater),
+              new NetNamedPipeBinding(),
+              "PipeReverse");
+
+            host.Open();
         }
+    }
+
+    public class LogEntry
+    {
+        public String strLogentry{ get; set; }
+        public String strLogFile { get; set; }
     }
 
     [ServiceContract]
